@@ -1,0 +1,1061 @@
+
+typedef struct struct_variable{
+	char* name;
+	int typeNo;
+	int size;
+	int lineNo;
+	struct struct_variable* next;
+}Variable;
+typedef struct struct_declare{
+	char* name;
+	int lineNo;
+	int typeNo;
+	Variable* child_variable;
+	struct struct_declare* next; 
+}Struct;
+typedef struct struct_function{
+	char* name;
+	int typeNo;
+	int lineNo;
+	struct struct_function* next;
+	Variable* v;
+}Function;
+Variable* variables;
+Struct* structs;
+Function* functions;
+void printVariable(Variable* root);
+Variable* newVariable(char* name,int typeNo,int size,int lineNo,int mode);
+int declaredVariable(char* name,Variable* variable){
+
+	Variable* v=variable;
+	while(v->next!=NULL){
+	v=v->next;
+	if(v->name!=NULL&&name!=NULL){
+	
+	if(strcmp(name,v->name)==0){
+	
+	return 1;
+	}
+	}
+	}
+	return 0;
+}
+int declaredStructVariable(char* name){
+	Struct* s=structs;
+	if(structs==NULL){
+	return 0;
+	}
+	while(s->next!=NULL){
+	s=s->next;
+	if(s->name!=NULL&& name!=NULL){
+	if(strcmp(s->name,name)==0){
+	return 1;
+	}
+	}
+	}
+	
+	return 0;
+}
+int declaredFunctionVariable(char* name){
+	Function* f=functions;
+	while(f->next!=NULL){
+	f=f->next;
+	if(f->v!=NULL){
+	if(declaredVariable(name,f->v)){
+	return 1;
+	}
+	}
+	}
+	return 0;
+}
+int sameVariables(Variable* variable1,Variable* variable2){
+	Variable* v1=variable1;
+	Variable* v2=variable2;
+	if(v1==NULL&&v2==NULL){
+	return 1;
+	}
+	else if(v1==NULL||v2==NULL){
+	return 0;
+	}
+	int diff=1;
+	
+	while(v1->next!=NULL&&v2->next!=NULL){
+	v1=v1->next;
+	v2=v2->next;
+	if(v1->typeNo!=v2->typeNo){
+	diff=0;
+	break;
+	}
+	}
+	
+	
+	if(v1->next==NULL){
+	if(v2->next!=NULL){
+	return 0;
+	}
+	}
+	if(v2->next==NULL){
+	if(v1->next!=NULL){
+	return 0;
+	}
+	}
+	
+	return diff; 
+}
+
+int declaredFunction(char* name){
+	Function* f=functions;
+	while(f->next!=NULL){
+	f=f->next;
+	if(strcmp(f->name,name)==0){
+	return 1;
+	}
+	}
+	return 0;
+}
+int getStructTypeNo(char* name,int lineNo){
+	Struct* s=structs;
+	if(s==NULL){
+	fprintf(stderr,"Error type 17 at Line %d:\n",lineNo);
+	return 0;
+	}
+	while(s->next!=NULL){
+	s=s->next;
+	if(s->name!=NULL){
+	if(strcmp(name,s->name)==0){
+	return s->typeNo;
+	}
+	}
+	}
+	fprintf(stderr,"Error type 17 at Line %d:\n",lineNo);
+	return 0;
+}
+
+Variable* getLastVariable(){
+	
+	if(variables==NULL){
+	variables=(Variable*)malloc(sizeof(Variable));
+	}	
+	Variable* res=variables;
+	while(res->next!=NULL){
+	res=res->next;
+	}
+	return res;
+}
+Struct* getLastStruct(){
+	
+	if(structs==NULL){
+	structs=(Struct*)malloc(sizeof(Struct));
+	structs->typeNo=0;
+	}
+	Struct* res=structs;
+	while(res->next!=NULL){
+	res=res->next;
+	}
+	return res;
+}
+Function* getLastFunction(){
+	
+	if(functions==NULL){
+	functions=(Function*)malloc(sizeof(Function));
+	}
+	Function* res=functions;
+	while(res->next!=NULL){
+	res=res->next;
+	}
+	return res;
+}
+Variable* getLast(Variable* variable){
+	
+	if(variable==NULL){
+	variable=(Variable*)malloc(sizeof(Variable));
+	}	
+	Variable* res=variable;
+	while(res->next!=NULL){
+	res=res->next;
+	}
+	return res;
+}
+Variable* examVariables(Variable* variable,char* name){
+	Variable* v=(Variable*)malloc(sizeof(Variable));
+	if(variable==NULL){
+	return NULL;
+	}
+	while(variable->next!=NULL){
+	variable=variable->next;
+	if(declaredVariable(variable->name,v)==0){
+	if(name!=NULL){
+	if(strcmp(variable->name,name)!=0){
+	getLast(v)->next=newVariable(variable->name,variable->typeNo,variable->size,variable->lineNo,1);
+	}
+	}
+	else{
+	getLast(v)->next=newVariable(variable->name,variable->typeNo,variable->size,variable->lineNo,1);
+	}
+	}
+	else{
+	
+	fprintf(stderr,"Error type 15 at Line %d:\n",variable->lineNo);
+	}
+	}
+	return v;
+}
+void addVariable(char* name,int typeNo,int size,int lineNo){
+	if((declaredVariable(name,variables)||declaredStructVariable(name)||declaredFunctionVariable(name))==0){
+	Variable* newVariable=(Variable*)malloc(sizeof(Variable));
+	newVariable->name=name;
+	newVariable->typeNo=typeNo;
+	newVariable->size=size;
+	newVariable->next=NULL;
+	newVariable->lineNo=lineNo;
+	getLastVariable()->next=newVariable;
+	}
+	else{
+	fprintf(stderr,"Error type 3 at Line %d:\n",lineNo);
+	}
+}
+int addStruct(char* name,Variable* variable,int lineNo){
+	if((declaredVariable(name,variables)||declaredStructVariable(name)||declaredFunctionVariable(name))==0){
+	Struct* newStruct=(Struct*)malloc(sizeof(Struct));
+	newStruct->name=name;
+	if(variable!=NULL){
+	newStruct->child_variable=examVariables(variable,name);
+	}
+	else{
+	variable=(Variable*)malloc(sizeof(Variable));
+	newStruct->child_variable=variable;
+	}
+	newStruct->next=NULL;
+	newStruct->lineNo=lineNo;
+	Struct* s=getLastStruct();
+	newStruct->typeNo=s->typeNo+1;
+	getLastStruct()->next=newStruct;
+	return newStruct->typeNo;	
+	}
+	else{
+	fprintf(stderr,"Error type 16 at Line %d:\n",lineNo);
+	return -3;
+	}
+}
+int addFunction(char* name,int typeNo,Variable* v,int lineNo){
+	
+	if(declaredFunction(name)==0){
+	Function* newFunction=(Function*)malloc(sizeof(Function));
+	newFunction->name=name;
+	
+	newFunction->typeNo=typeNo;
+	if(v!=NULL){
+	newFunction->v=v;
+	}
+	else{
+	v=(Variable*)malloc(sizeof(Variable));
+	newFunction->v=v;
+	}
+	newFunction->next=NULL;
+	newFunction->lineNo=lineNo;
+	getLastFunction()->next=newFunction;
+	return 1;
+	}
+	else{
+	fprintf(stderr,"Error type 4 at Line %d:\n",lineNo);
+	return 0;
+	}
+}
+Variable* newVariable(char* name,int typeNo,int size,int lineNo,int mode){
+	
+	if((declaredVariable(name,variables)||declaredStructVariable(name)||declaredFunctionVariable(name))==0){
+		
+	Variable* newVariable=(Variable*)malloc(sizeof(Variable));
+	newVariable->name=name;
+	newVariable->typeNo=typeNo;
+	newVariable->size=size;
+	newVariable->next=NULL;
+	newVariable->lineNo=lineNo;
+	return newVariable;
+	}
+	else{
+	fprintf(stderr,"Error type 3 at Line %d:\n",lineNo);
+	return NULL;
+	}
+}
+Variable* getVariable(char* name){
+	Variable* v=variables;
+	if(v!=NULL){
+	while(v->next!=NULL){
+	v=v->next;
+	if(strcmp(name,v->name)==0){
+	return v;
+	}
+	}
+	}
+	Function* f=functions;
+	if(f!=NULL){
+	while(f->next!=NULL){
+	f=f->next;
+	Variable* fv=f->v;
+	if(fv!=NULL){
+	while(fv->next!=NULL){
+	fv=fv->next;
+	if(strcmp(name,fv->name)==0){
+	return fv;
+	}
+	}
+	}
+	}
+	}
+	Variable* res=(Variable*)malloc(sizeof(Variable));
+	return res;
+}
+Variable* getStructVariable(char* name,int typeNo){
+		
+	Struct* s=structs;
+	if(s!=NULL){
+	while(s->next!=NULL){
+	s=s->next;
+	if(s->typeNo==typeNo){
+	
+	break;
+	}
+	}
+	}
+	else{
+	
+	Variable* res=(Variable*)malloc(sizeof(Variable));
+	return res;
+	}
+	Variable* v=s->child_variable;
+	
+	if(v!=NULL){
+	
+	while(v->next!=NULL){
+	
+	v=v->next;
+	if(v->name!=NULL){
+	if(strcmp(name,v->name)==0){
+	
+	return v;
+	}
+	}
+	}
+	}
+	
+	Variable* res=(Variable*)malloc(sizeof(Variable));
+	return res;
+}
+Variable* getFunctionVariable(char* name){
+	Function* f=functions;
+	if(f==NULL){
+	return NULL;
+	}
+	while(f->next!=NULL){
+	f=f->next;
+	if(strcmp(f->name,name)==0){
+	return f->v;
+	}
+	}
+	return NULL;
+}
+int getFunctionType(char* name){
+	Function* f=functions;
+	if(f==NULL){
+	return 0;
+	}
+	while(f->next!=NULL){
+	f=f->next;
+	if(strcmp(f->name,name)==0){
+	return f->typeNo;
+	}
+	}
+	return 0;
+}
+Struct* getStruct(int typeNo){
+	Struct* s=structs;
+	while(s->next!=NULL){
+	s=s->next;
+	if(s->typeNo==typeNo){
+	return s;
+	}
+	}
+}
+int cmpStruct(int type1,int type2){
+	Struct* s1=getStruct(type1);
+	Struct* s2=getStruct(type2);
+	if(sameVariables(s1->child_variable,s2->child_variable)){
+	return 1;
+	}
+	else{
+	return 0;
+	}
+	
+}
+char* getVarDec(Leaf* VarDec);
+int getVarDecSize(Leaf* VarDec);
+void parseExtDef(Leaf* ExtDef);
+void parseDefList(Leaf* DefList,Variable* res,int mode);
+void parseCompSt(Leaf* CompSt,int typeNo);
+void parseStmtList(Leaf* StmtList,int typeNo);
+void parseStmt(Leaf* Stmt,int typeNo);
+Variable* getStructVariables(Leaf* DefList);
+void parseVarList(Leaf* VarList,Variable* res);
+Variable* parseParamDec(Leaf* ParamDec);
+Variable* parseDef(Leaf* Def,int mode);
+void parseDecList(Leaf* DecList,Variable* res,int typeNo,int mode);
+void parseExtDecList(Leaf* ExtDecList,int typeNo);
+int parseFunDec(Leaf* FunDec,int typeNo);
+int parseExp(Leaf* Exp);
+void parseTree(Leaf* root){
+	if(root==NULL){
+	return;
+	}
+	Leaf* ExtDefList=root->child;
+	if(ExtDefList->child==NULL){
+	return;
+	}
+	parseExtDef(ExtDefList->child);
+}
+int parseSpecifier(Leaf* Specifier){
+	if(strcmp(Specifier->child->name,"TYPE")==0){
+	if(strcmp(Specifier->child->value,"int")==0){
+	return -2;
+	}
+	else if(strcmp(Specifier->child->value,"float")==0){
+	return -1;
+	}
+	}
+	else if(strcmp(Specifier->child->name,"StructSpecifier")==0){
+	Leaf* StructSpecifier=Specifier->child;
+		if(strcmp(StructSpecifier->child->next->name,"OptTag")==0){
+		Leaf* DefList=StructSpecifier->child->next->next->next;
+		char* name;
+		int typeNo;
+		if(StructSpecifier->child->next->child!=NULL){
+		name=StructSpecifier->child->next->child->value;
+		}
+		else{
+		name=NULL;
+		}
+		if(DefList->child==NULL){
+		typeNo=addStruct(name,NULL,StructSpecifier->lineNo);
+		}
+		else{
+		Variable* v=getStructVariables(DefList);
+		if(v->next!=NULL){
+		typeNo=addStruct(name,getStructVariables(DefList),StructSpecifier->lineNo);
+		}
+		else{
+		return -3;
+		}
+		}
+		
+		return typeNo;
+		}
+		else if(strcmp(StructSpecifier->child->next->name,"Tag")==0){
+		return getStructTypeNo(StructSpecifier->child->next->child->value,Specifier->lineNo);
+		}
+	}
+}
+Variable* getStructVariables(Leaf* DefList){
+	Variable* res=(Variable*)malloc(sizeof(Variable));
+	parseDefList(DefList,res,0);
+	return res;
+}
+void parseDefList(Leaf* DefList,Variable* res,int mode){
+	
+	if(DefList->child==NULL){
+	return;
+	}
+	else{
+	Variable* v=parseDef(DefList->child,mode);
+	if(v!=NULL){
+	getLast(res)->next=v->next;
+	}
+	
+	parseDefList(DefList->child->next,res,mode);
+	}
+}
+Variable* parseDef(Leaf* Def,int mode){
+	Leaf* Specifier=Def->child;
+	Leaf* DecList=Def->child->next;
+	int typeNo=parseSpecifier(Specifier);
+	Variable* res=(Variable*)malloc(sizeof(Variable));
+	if(typeNo==-3){
+	return res;
+	}
+	else if(typeNo!=0){
+	parseDecList(DecList,res,typeNo,mode);
+	return res;
+	}
+	else{
+	
+	return res;
+	}
+}
+void parseDecList(Leaf* DecList,Variable* res,int typeNo,int mode){
+	Leaf* VarDec=DecList->child->child;
+	if(mode==0){
+	if(VarDec->next==NULL){
+	getLast(res)->next=newVariable(getVarDec(VarDec),typeNo,getVarDecSize(VarDec),VarDec->lineNo,1);
+	}
+	else{
+	fprintf(stderr,"Error type 15 at Line %d:\n",VarDec->lineNo);
+	}
+	}
+	else if(mode==1){
+	if(VarDec->next==NULL){
+	addVariable(getVarDec(VarDec),typeNo,getVarDecSize(VarDec),VarDec->lineNo);
+	}
+	else{
+	int type=parseExp(VarDec->next->next);
+	if(type!=0){
+	if(type!=typeNo){
+	fprintf(stderr,"Error type 5 at Line %d:\n",VarDec->lineNo);
+	}
+	else{
+	addVariable(getVarDec(VarDec),typeNo,getVarDecSize(VarDec),VarDec->lineNo);
+	}
+	}
+	}
+	}
+	
+	if(DecList->child->next!=NULL){
+	parseDecList(DecList->child->next->next,res,typeNo,mode);
+	}
+}
+void parseExtDef(Leaf* ExtDef){
+	Leaf* Specifier=ExtDef->child;
+	int typeNo=parseSpecifier(Specifier);
+	if(typeNo==-3){
+	//do nothing
+	}
+	else if(typeNo!=0){
+	if(strcmp(Specifier->next->name,"ExtDecList")==0){
+	parseExtDecList(Specifier->next,typeNo);
+	}
+	else if(strcmp(Specifier->next->name,"SEMI")==0){
+	//do nothing
+	}
+	else if(strcmp(Specifier->next->name,"FunDec")==0){
+	if(parseFunDec(Specifier->next,typeNo)){
+	parseCompSt(Specifier->next->next,typeNo);
+	}
+	}
+	}
+	else{
+	
+	}
+	if(ExtDef->next->child!=NULL){
+	parseExtDef(ExtDef->next->child);
+	}
+}
+char* getVarDec(Leaf* VarDec){
+	if(strcmp(VarDec->child->name,"ID")==0){
+	return VarDec->child->value;
+	}
+	else{
+	return getVarDec(VarDec->child);
+	}
+}
+int getVarDecSize(Leaf* VarDec){
+	Leaf* v=VarDec;
+	int size=0;
+	while(strcmp(v->child->name,"ID")!=0){
+	size++;
+	v=v->child;
+	}
+	return size;	
+}
+void parseExtDecList(Leaf* ExtDecList,int typeNo){
+	addVariable(getVarDec(ExtDecList->child),typeNo,getVarDecSize(ExtDecList->child),ExtDecList->child->lineNo);
+	if(ExtDecList->child->next!=NULL){
+	parseExtDecList(ExtDecList->child->next->next,typeNo);
+	}
+}
+int parseFunDec(Leaf* FunDec,int typeNo){
+	if(strcmp(FunDec->child->next->next->name,"VarList")==0){
+	Variable* res=(Variable*)malloc(sizeof(Variable));
+	parseVarList(FunDec->child->next->next,res);
+	
+	if (res->next!=NULL){
+	return addFunction(FunDec->child->value,typeNo,res,FunDec->lineNo);
+	}
+	else{
+	return 0;
+	}
+	}
+	else{
+	return addFunction(FunDec->child->value,typeNo,NULL,FunDec->lineNo);
+	}
+}
+void parseVarList(Leaf* VarList,Variable* res){
+	if(res==NULL){
+	return;
+	}
+	Variable* v=parseParamDec(VarList->child);
+	if(v==NULL){
+	res=NULL;
+	return;
+	}
+	getLast(res)->next=v;
+	if(VarList->child->next==NULL){
+	return;
+	}
+	else{
+	parseVarList(VarList->child->next->next,res);
+	}
+}
+Variable* parseParamDec(Leaf* ParamDec){
+	
+	Leaf* Specifier=ParamDec->child;
+	Leaf* VarDec=ParamDec->child->next;
+	int typeNo=parseSpecifier(Specifier);
+	if(typeNo==-3){
+	return NULL;
+	}
+	else if(typeNo!=0){
+
+	return newVariable(getVarDec(VarDec),typeNo,getVarDecSize(VarDec),VarDec->lineNo,0);
+	}
+	else{
+	return NULL;
+	}
+}
+void parseCompSt(Leaf* CompSt,int typeNo){
+	Leaf* DefList=CompSt->child->next;
+	Leaf* StmtList=CompSt->child->next->next;
+	parseDefList(DefList,variables,1);
+	parseStmtList(StmtList,typeNo);
+}
+void parseStmtList(Leaf* StmtList,int typeNo){
+	if(StmtList->child==NULL){
+	return;
+	}
+	Leaf* Stmt=StmtList->child;
+	parseStmt(Stmt,typeNo);
+	parseStmtList(Stmt->next,typeNo);
+}
+void parseStmt(Leaf* Stmt,int typeNo){
+	if(strcmp(Stmt->child->name,"CompSt")==0){
+	parseCompSt(Stmt->child,typeNo);
+	}
+	else if(strcmp(Stmt->child->name,"Exp")==0){
+	parseExp(Stmt->child);
+	}
+	else if(strcmp(Stmt->child->name,"RETURN")==0){
+	int type=parseExp(Stmt->child->next);
+	if(type!=0){
+	if(type!=typeNo){
+	if(type<0||typeNo<0){
+	fprintf(stderr,"Error type 8 at Line %d:\n",Stmt->lineNo);
+	}
+	else{
+	if(cmpStruct(type,typeNo)==0){
+	fprintf(stderr,"Error type 8 at Line %d:\n",Stmt->lineNo);
+	}
+	}
+	}
+	}
+	}
+	else{
+	int type=parseExp(Stmt->child->next->next);
+	if(type!=0){
+	if(type!=-2){
+	fprintf(stderr,"Error type 7 at Line %d:\n",Stmt->lineNo);
+	}
+	}
+	parseStmt(Stmt->child->next->next->next->next,typeNo);
+	}
+	
+}
+int isRight(Leaf* Exp){
+	if(strcmp(Exp->child->name,"ID")==0){
+	return 1;
+	}
+	if(strcmp(Exp->child->name,"Exp")==0){
+	if(strcmp(Exp->child->next->name,"DOT")==0){
+	return 1;
+	}
+	else if(strcmp(Exp->child->next->name,"LB")==0){
+	return 1;
+	}
+	else{
+	return 0;
+	}
+	}
+	else{
+	return 0;
+	}
+}
+int getSizeVariable(Leaf* Exp){
+	Leaf* l=Exp;
+	while(l->child->next!=NULL){
+	if(strcmp(l->child->next->name,"LB")==0){
+	l=l->child;
+	}
+	else{
+	break;
+	}
+	}
+	
+	if(strcmp(l->child->name,"ID")==0&& l->child->next==NULL){
+	Variable* v=getVariable(l->child->value);
+	return v->size>0;
+	}
+	else if(l->child->next!=NULL){
+	if(strcmp(l->child->next->name,"DOT")==0){
+	Variable* v=getStructVariable(l->child->next->next->name,parseExp(l->child));
+	return v->size>0;
+	}
+	else{
+	return 0;
+	}
+	}
+	return 0;
+}
+int getSize(Leaf* Exp){
+	if(Exp->child->next!=NULL){
+	if(strcmp(Exp->child->next->name,"LB")==0){
+	return getSize(Exp->child)+1;
+	}
+	}
+	return 0;
+}
+int getRealSize(Leaf* Exp){
+	Leaf* l=Exp;
+	
+	while(l->child->next!=NULL){
+	if(strcmp(l->child->next->name,"LB")==0){
+	l=l->child;
+	}
+	else{
+	break;
+	}
+	}
+	
+	if(strcmp(l->child->name,"ID")==0&& l->child->next==NULL){
+	
+	return getVariable(l->child->value)->size;
+	}
+	else if(l->child->next!=NULL){
+	if(strcmp(l->child->next->name,"DOT")==0){
+	return getStructVariable(l->child->next->next->name,parseExp(l->child))->size;
+	}
+	else{
+	return 0;
+	}
+	}
+	return 0;
+}
+int cmpArgs(Variable* v,Leaf* Args){
+	if(Args==NULL&&v==NULL){
+	return 1;
+	}
+	 if(Args==NULL||v==NULL){
+	return 0;
+	}
+	
+	int res=1;
+	if(v->typeNo!=parseExp(Args->child)){
+	res=0;
+	return res;
+	}
+	if(Args->child->next!=NULL){
+	return res&&cmpArgs(v->next,Args->child->next->next);
+	}
+	else{
+	return res&&cmpArgs(v->next,NULL);
+	}
+	
+}
+int parseExp(Leaf* Exp){
+	if(strcmp(Exp->child->name,"ID")==0&&Exp->child->next==NULL){
+	int typeNo=getVariable(Exp->child->value)->typeNo;
+	if(typeNo==0){
+	fprintf(stderr,"Error type 1 at Line %d:\n",Exp->lineNo);
+	}
+	return typeNo;
+	}
+	else if(strcmp(Exp->child->name,"INT")==0){
+	return -2;
+	}
+	else if(strcmp(Exp->child->name,"FLOAT")==0){
+	return -1;
+	}
+	else if(strcmp(Exp->child->name,"Exp")==0){
+	if(strcmp(Exp->child->next->name,"DOT")==0){
+		int typeNo=parseExp(Exp->child);
+		Leaf* ID=Exp->child->next->next;
+		
+		if(typeNo<0){
+		fprintf(stderr,"Error type 13 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if(typeNo==0){
+		return 0;
+		}
+		else if(typeNo>0){
+
+		int IdType=getStructVariable(ID->value,typeNo)->typeNo;
+		
+		if(IdType==0){
+		fprintf(stderr,"Error type 14 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else{
+		return IdType;
+		}
+		}
+	}
+	else if(strcmp(Exp->child->next->name,"ASSIGNOP")==0){
+		if(isRight(Exp->child)){
+		int typeL=parseExp(Exp->child);
+		int typeR=parseExp(Exp->child->next->next);
+				
+		if(typeL==0){
+		return 0;
+		}
+		else if(typeR==0){
+		return 0;
+		}
+		else if(typeL>1&&typeR>1){
+		if(cmpStruct(typeL,typeR)==0){
+		fprintf(stderr,"Error type 5 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if(typeL!=typeR){
+		fprintf(stderr,"Error type 5 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		}
+		else if(typeL!=typeR){
+		fprintf(stderr,"Error type 5 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else{
+		int sizeL=getSize(Exp->child);
+		int realSizeL=getRealSize(Exp->child);
+		
+		int sizeR=getSize(Exp->child->next->next);
+
+		int realSizeR=getRealSize(Exp->child->next->next);
+
+		if(sizeL>realSizeL){
+		//fprintf(stderr,"Error type 10 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if(sizeR>realSizeR){
+		fprintf(stderr,"Error type 10 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if((realSizeR-sizeR)!=(realSizeL-sizeL)){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		return typeL;
+		}
+		}
+		else{
+		fprintf(stderr,"Error type 6 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+	}
+	else if(strcmp(Exp->child->next->name,"AND")==0||strcmp(Exp->child->next->name,"OR")==0||strcmp(Exp->child->next->name,"RELOP")==0){
+		int typeL=parseExp(Exp->child);
+		int typeR=parseExp(Exp->child->next->next);
+		
+		if(typeL==0){
+		return 0;
+		}
+		else if(typeR==0){
+		return 0;
+		}
+		else if(typeL!=-2||typeR!=-2){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else{
+		int sizeL=getSize(Exp->child);
+		int realSizeL=getRealSize(Exp->child);
+		int sizeR=getSize(Exp->child->next->next);
+		int realSizeR=getRealSize(Exp->child->next->next);
+
+		
+		if((realSizeR-sizeR)!=(realSizeL-sizeL)){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if(realSizeR-sizeR!=0){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		return -2;
+		}
+		
+	}
+	else if(strcmp(Exp->child->next->name,"PLUS")==0||strcmp(Exp->child->next->name,"MINUS")==0||strcmp(Exp->child->next->name,"STAR")==0||strcmp(Exp->child->next->name,"DIV")==0){
+		int typeL=parseExp(Exp->child);
+		int typeR=parseExp(Exp->child->next->next);
+		if(typeL==0){
+		return 0;
+		}
+		else if(typeR==0){
+		return 0;
+		}
+		else if(typeL>0||typeR>0){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if(typeL!=typeR){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else{
+		int sizeL=getSize(Exp->child);
+		int realSizeL=getRealSize(Exp->child);
+		int sizeR=getSize(Exp->child->next->next);
+		int realSizeR=getRealSize(Exp->child->next->next);
+		if((realSizeR-sizeR)!=(realSizeL-sizeL)){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else if(realSizeR-sizeR!=0){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		return typeL;
+		}
+	}
+	else if(strcmp(Exp->child->next->name,"LB")==0){
+		int typeL=parseExp(Exp->child);
+		int typeR=parseExp(Exp->child->next->next);
+		if(typeL==0){
+		return 0;
+		}
+		else if(typeR==0){
+		return 0;
+		}
+		/*else if(getSizeVariable(Exp)==0){
+		fprintf(stderr,"Error type 10 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}*/
+		else if(typeR!=-2){
+		fprintf(stderr,"Error type 12 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		else{
+		return typeL;
+		}
+		
+		
+	}
+	}
+	else if(strcmp(Exp->child->name,"LP")==0){
+		return parseExp(Exp->child->next);
+	}
+	else if(strcmp(Exp->child->name,"MINUS")==0){
+		int type=parseExp(Exp->child->next);
+		if(type<0){
+		int size=getSize(Exp->child->next);
+		int realSize=getRealSize(Exp->child->next);
+		if(realSize!=size){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		return type;
+		}
+		else if(type==0){
+		return 0;
+		}
+		else{
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+	}
+	else if(strcmp(Exp->child->name,"NOT")==0){
+		int type=parseExp(Exp->child->next);
+		if(type==-2){
+		int size=getSize(Exp->child->next);
+		int realSize=getRealSize(Exp->child->next);
+		if(realSize!=size){
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+		return type;
+		}
+		else if(type==0){
+		return 0;
+		}
+		else{
+		fprintf(stderr,"Error type 7 at Line %d:\n",Exp->lineNo);
+		return 0;
+		}
+	}
+	else{
+	Leaf* ID=Exp->child;
+	Variable* v1=getVariable(ID->value);
+	if(v1->name==NULL){
+	Variable* v=getFunctionVariable(ID->value);
+	if(v==NULL){
+	fprintf(stderr,"Error type 2 at Line %d:\n",Exp->lineNo);
+	return 0;
+	}
+	else{
+	if(strcmp(ID->next->next->name,"RP")==0){
+	if(cmpArgs(v->next,NULL)){
+	return getFunctionType(ID->value);
+	}
+	else{
+	fprintf(stderr,"Error type 9 at Line %d:\n",Exp->lineNo);
+	return 0;
+	}
+	}
+	else{
+	if(cmpArgs(v->next,ID->next->next)){
+	return getFunctionType(ID->value);
+	}
+	else{
+	fprintf(stderr,"Error type 9 at Line %d:\n",Exp->lineNo);
+	return 0;
+	}
+	}
+	}
+	}
+	else{
+	
+	fprintf(stderr,"Error type 11 at Line %d:\n",Exp->lineNo);
+	return 0;
+	
+	
+	}
+	
+	}
+}
+
+void printVariable(Variable* root){
+	if(root==NULL){
+	return;
+	}
+	fprintf(stderr,"%d:     %s  ,size:      %d at line %d\n",root->typeNo,root->name,root->size,root->lineNo);
+	printVariable(root->next);
+}
+void printStruct(Struct* root){
+	if(root==NULL){
+	return;	
+	}
+	fprintf(stderr,"struct:     %s at line %d\n",root->name,root->lineNo);
+	printVariable(root->child_variable->next);
+	printStruct(root->next);
+}
+void printFunction(Function* root){
+	if(root==NULL){
+	return;
+	}
+	fprintf(stderr,"function:     %s ,type:     %d at line %d\n",root->name,root->typeNo,root->lineNo);
+	printVariable(root->v->next);
+	printFunction(root->next);
+}
+
+
+
+
+
+
